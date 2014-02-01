@@ -19,6 +19,10 @@
     (list 1 "quit" piano-quit "")
     (list 2 "send" piano-send "")
     (list 2 "station" piano-send "s")
+    (list 1 "pause" piano-send "S")
+    (list 1 "play" piano-send "P")
+    (list 1 "+" piano-send "+")
+    (list 1 "-" piano-send "-")
     (list 1 "next" piano-send "n")))
 
 
