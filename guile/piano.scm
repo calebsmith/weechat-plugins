@@ -1,19 +1,8 @@
 (use-modules (ice-9 popen))
 
-(weechat:register "piano" "MCConsALot" "0.1" "GPL3" "Control piano bar client" "" "")
-
-(weechat:hook_command
-    "piano" "Control pianobar"
-    "[command]" "command to send to pianobar. Use /piano start, to begin"
-    "start next quit station send"
-    "main" "")
+(weechat:register "piano" "Caleb Smith" "0.1" "GPL3" "Control piano bar client" "" "")
 
 
-; Begin with no subprocess running
-(define pianobar-pipe '())
-
-; Mappings of command patterns to functions and signals to send to pianobar
-; Format: length, subcommand function pianbar-command
 (define subcommand-patterns '(
     (list 1 "start" piano-start "")
     (list 1 "quit" piano-quit "")
@@ -26,6 +15,35 @@
     (list 1 "next" piano-send "n")))
 
 
+; Derive the tab completion string for the subcommands. E.g. ||start ||quit ...
+(define subcommand-tab-completions
+    (apply string-append (map (lambda (i) (string-append "|| " i))
+        (map (lambda (i) (list-ref i 2)) subcommand-patterns))))
+
+
+(weechat:hook_command
+    "piano" "Control pianobar (a CLI client for Pandora)"
+    "command [arg]"
+    (string-append "Must use `/piano start`, to begin. Commands include:"
+        "\n/piano start - Start Pianobar"
+        "\n/piano pause - pause track"
+        "\n/piano play - Resume playing"
+        "\n/piano next - next track"
+        "\n/piano + - Love song"
+        "\n/piano - - Ban song"
+        "\n/piano station <number> - Switch to station <number>"
+        "\n/piano send <command> - Send command directly to pianobar process"
+        "\n/piano quit - Quit Pianobar")
+    subcommand-tab-completions
+    "main" "")
+
+
+; Begin with no subprocess running
+(define pianobar-pipe '())
+
+; Mappings of command patterns to functions and signals to send to pianobar
+; Format: length, subcommand function pianbar-command
+
 ; Unpacks args and passes the given command to command-handler
 (define (main . args)
     (command-handler (list-ref (car args) 2))
@@ -34,13 +52,9 @@
 
 ; Handle the IRC command given by the user
 (define (command-handler command)
-    (let ((p (filter promise?
-             (map (lambda (pattern)
-                 (build-promise command pattern))
-                 subcommand-patterns))))
-        (if (> (length p) 0)
-            (force (car p))
-            (weechat:print "" "Not a valid command. Try /help piano")))
+    (map force (filter promise?
+         (map (lambda (pattern)
+             (build-promise command pattern)) subcommand-patterns)))
         weechat:WEECHAT_RC_OK)
 
 
@@ -55,9 +69,8 @@
     (if (not (null? pianobar-pipe))
         (begin
             (display "q\n" pianobar-pipe)
-            (display "Piano - Quitting pianobar")
-            (newline)))
-            (set! pianobar-pipe #f)
+            (weechat:print "" "Piano - Quitting pianobar")
+            (set! pianobar-pipe '())))
     weechat:WEECHAT_RC_OK)
 
 
@@ -65,9 +78,7 @@
 (define (piano-send message)
     (if (not (null? pianobar-pipe))
         (display message pianobar-pipe)
-        (begin
-            (display "Pianobar is not running. use `/piano start` to start")
-            (newline)))
+        (weechat:print "" "Pianobar is not running. use `/piano start` to start"))
     weechat:WEECHAT_RC_OK)
 
 
