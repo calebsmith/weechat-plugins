@@ -4,27 +4,29 @@
 
 
 (define subcommand-patterns '(
-    (list 1 "start" piano-start "")
-    (list 1 "quit" piano-quit "")
-    (list 2 "send" piano-send "")
-    (list 2 "station" piano-send "s")
-    (list 1 "pause" piano-send "S")
-    (list 1 "play" piano-send "P")
-    (list 1 "+" piano-send "+")
-    (list 1 "-" piano-send "-")
-    (list 1 "next" piano-send "n")))
+    (1 "start" piano-start "")
+    (1 "quit" piano-quit "")
+    (2 "send" piano-send "")
+    (2 "station" piano-send "s")
+    (1 "pause" piano-send "S")
+    (1 "play" piano-send "P")
+    (1 "+" piano-send "+")
+    (1 "-" piano-send "-")
+    (1 "next" piano-send "n")))
 
 
 ; Derive the tab completion string for the subcommands. E.g. ||start ||quit ...
 (define subcommand-tab-completions
     (apply string-append (map (lambda (i) (string-append "|| " i))
-        (map (lambda (i) (list-ref i 2)) subcommand-patterns))))
+        (map (lambda (i) (list-ref i 1)) subcommand-patterns))))
 
 
 (weechat:hook_command
     "piano" "Control pianobar (a CLI client for Pandora)"
-    "command [arg]"
-    (string-append "Must use `/piano start`, to begin. Commands include:"
+    "/piano command [arg]"
+    (string-append
+        "Must have pianobar installed and configured to automatically login"
+        "\nUse `/piano start`, to begin. Commands include:"
         "\n/piano start - Start Pianobar"
         "\n/piano pause - pause track"
         "\n/piano play - Resume playing"
@@ -36,6 +38,9 @@
         "\n/piano quit - Quit Pianobar")
     subcommand-tab-completions
     "main" "")
+
+; Stop pianobar when exiting weechat
+(weechat:hook_signal "quit" "piano-kill" "")
 
 
 ; Begin with no subprocess running
@@ -65,12 +70,17 @@
 
 
 ; Close a pianobar subprocess
-(define (piano-quit message)
+(define (piano-kill . args)
     (if (not (null? pianobar-pipe))
         (begin
             (display "q\n" pianobar-pipe)
-            (weechat:print "" "Piano - Quitting pianobar")
             (set! pianobar-pipe '())))
+    weechat:WEECHAT_RC_OK)
+
+; Close pianobar and print a qutting message
+(define (piano-quit message)
+    (piano-kill)
+    (weechat:print "" "Piano - Quitting pianobar")
     weechat:WEECHAT_RC_OK)
 
 
@@ -110,10 +120,10 @@
 ;; command does not match the pattern, otherwise return a promise that calls
 ;; the pattern's function, with its output
 (define (build-promise command pattern)
-    (let ((len (list-ref pattern 1))
-         (input (list-ref pattern 2))
-         (f (list-ref pattern 3))
-         (output (list-ref pattern 4)))
+    (let ((len (list-ref pattern 0))
+         (input (list-ref pattern 1))
+         (f (list-ref pattern 2))
+         (output (list-ref pattern 3)))
         (if (matches-pattern? command len input)
             (delay ((eval f (interaction-environment))
                 (build-output-command command output)))
