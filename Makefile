@@ -1,3 +1,3 @@
 .PHONY: guile
 guile:
-	cp guile/* ~/.weechat/guile/autoload
+	cp guile/*.scm ~/.weechat/guile/
