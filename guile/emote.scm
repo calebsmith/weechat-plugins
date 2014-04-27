@@ -35,7 +35,7 @@
 
 ; Unpacks args and passes the input buffer and given command to command-handler
 (define (main . args)
-    (command-handler (list-ref (car args) 1) (list-ref (car args) 2))
+    (command-handler (list-ref args 1) (list-ref args 2))
     weechat:WEECHAT_RC_OK)
 
 
