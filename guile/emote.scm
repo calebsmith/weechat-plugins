@@ -33,14 +33,8 @@
     "main" "")
 
 
-; Unpacks args and passes the input buffer and given command to command-handler
-(define (main . args)
-    (command-handler (list-ref args 1) (list-ref args 2))
-    weechat:WEECHAT_RC_OK)
-
-
 ; Handle the IRC command given by the user. Sets input buffer as a side-effect
-(define (command-handler buffer command)
+(define (main data buffer command)
     (weechat:buffer_set buffer "input"
         (apply string-append (map (lambda (c)
             (string-append (hash-table-ref/default patterns c c) " "))
