@@ -20,15 +20,17 @@
             (hash-table-keys patterns))))
 
 
+; Hook main function up to the /emote command
 (weechat:hook_command
-    "emote" "Emote"
-    "/emote command"
+    "emote" "Emote" "/emote phrase"
     (string-append
         ""
         "\nUse `/emote phrase`. Words in phrase will be replaced with their"
         "\nemoticons:"
-        "\n/tableflip - flip"
-        "\n/look - the look")
+        "\n"
+        "\nExamples:"
+        "\n    /emote tableflip - (╯° °）╯︵ ┻━┻)"
+        "\n    /emote look - ಠ_ಠ")
     tab-completions
     "main" "")
 
