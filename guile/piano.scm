@@ -1,8 +1,10 @@
-(use-modules (ice-9 popen))
+(use-modules (ice-9 popen)
+    (ice-9 rdelim))
 
 (weechat:register "piano" "Caleb Smith" "0.1" "GPL3" "Control piano bar client" "" "")
 
-
+; Mappings of command patterns to functions and signals to send to pianobar
+; Format: length, subcommand function pianbar-command
 (define subcommand-patterns '(
     (1 "start" piano-start "")
     (1 "quit" piano-quit "")
@@ -43,29 +45,28 @@
 (weechat:hook_signal "quit" "piano-kill" "")
 
 
-; Begin with no subprocess running
+; Begin with no subprocess running and a null weechat buffer
 (define pianobar-pipe '())
-
-; Mappings of command patterns to functions and signals to send to pianobar
-; Format: length, subcommand function pianbar-command
-
-; Unpacks args and passes the given command to command-handler
-(define (main . args)
-    (command-handler (list-ref args 2))
-    weechat:WEECHAT_RC_OK)
+(define pianobar-buffer '())
 
 
 ; Handle the IRC command given by the user
-(define (command-handler command)
+(define (main data buffer command)
     (map force (filter promise?
          (map (lambda (pattern)
              (build-promise command pattern)) subcommand-patterns)))
         weechat:WEECHAT_RC_OK)
 
+(define (pianobar-input-buffer . args)
+    weechat:WEECHAT_RC_OK)
 
 ; Start a pianobar subprocess
 (define (piano-start message)
     (set! pianobar-pipe (open-input-output-pipe "pianobar"))
+    (set! pianobar-buffer (weechat:buffer_new "pianobar" "pianobar-input-buffer" "" "" ""))
+    (weechat:buffer_set pianobar-buffer "type" "free")
+    (weechat:buffer_set pianobar-buffer "title" "Pianobar")
+    (weechat:hook_timer 1000 0 0 "tick" "")
     weechat:WEECHAT_RC_OK)
 
 
@@ -128,3 +129,10 @@
             (delay ((eval f (interaction-environment))
                 (build-output-command command output)))
             #f)))
+
+
+(define (tick . args)
+    (if (not (or (null? pianobar-buffer) (null? pianobar-pipe)))
+        (if (not (eof-object? (peek-char pianobar-pipe)))
+            (weechat:print_y pianobar-buffer 0 (read-line pianobar-pipe 'peek))))
+    weechat:WEECHAT_RC_OK)
